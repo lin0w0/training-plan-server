@@ -1,0 +1,56 @@
+server:
+  port: 8080
+
+spring:
+  profiles:
+    active: dev
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    default-property-inclusion: non_null
+
+# MyBatis-Plus 配置
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.hfk.training.modules.*.entity
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+    banner: false
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# Knife4j API 文档配置
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+    enable-swagger-models: true
+    enable-footer: false
+
+# JWT 配置
+jwt:
+  secret: HFK-Training-Plan-Management-System-Secret-Key-Must-Be-At-Least-256-Bits-Long
+  expiration: 86400000  # 24小时
+  header: Authorization
+  token-prefix: "Bearer "
+
+# 系统配置
+training:
+  # 文件上传路径
+  upload-path: ./uploads
+  # 允许跨域地址
+  cors-origins:
+    - http://localhost:5173
+    - http://localhost:3000

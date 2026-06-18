@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DataSourcePerFileMappings">
+    <file url="file://$PROJECT_DIR$/src/main/resources/db/migration/V1__init_schema.sql" value="6b8efc65-075b-455f-9287-594a932a6b74" />
+    <file url="file://$PROJECT_DIR$/src/main/resources/db/migration/V2__init_test_data.sql" value="6b8efc65-075b-455f-9287-594a932a6b74" />
+    <file url="file://$PROJECT_DIR$/src/main/resources/db/migration/V2__test_data_v2.sql" value="6b8efc65-075b-455f-9287-594a932a6b74" />
+  </component>
+</project>

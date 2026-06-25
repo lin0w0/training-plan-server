@@ -9,6 +9,7 @@ import com.hfk.training.modules.system.mapper.TeacherMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,6 +22,7 @@ import java.util.Map;
 public class TeacherController {
 
     private final TeacherMapper teacherMapper;
+    private final JdbcTemplate jdbc;
 
     @GetMapping("/page")
     @Operation(summary = "分页查询教师（含学院名称）")
@@ -43,6 +45,8 @@ public class TeacherController {
     @PostMapping
     @Operation(summary = "新增教师")
     public Result<Void> create(@RequestBody Teacher teacher) {
+        Long count = jdbc.queryForObject("SELECT COUNT(*) FROM teacher WHERE teacher_no=?", Long.class, teacher.getTeacherNo());
+        if (count != null && count > 0) return Result.badRequest("工号已存在");
         teacherMapper.insert(teacher);
         return Result.ok("创建成功");
     }
@@ -58,7 +62,7 @@ public class TeacherController {
     @DeleteMapping("/{id}")
     @Operation(summary = "删除教师")
     public Result<Void> delete(@PathVariable Long id) {
-        teacherMapper.deleteById(id);
+        jdbc.update("DELETE FROM teacher WHERE id=?", id);
         return Result.ok("删除成功");
     }
 }

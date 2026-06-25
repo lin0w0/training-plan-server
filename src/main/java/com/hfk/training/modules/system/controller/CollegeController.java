@@ -9,6 +9,7 @@ import com.hfk.training.modules.system.mapper.CollegeMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,6 +22,7 @@ import java.util.List;
 public class CollegeController {
 
     private final CollegeMapper collegeMapper;
+    private final JdbcTemplate jdbc;
 
     @GetMapping("/page")
     @Operation(summary = "分页查询学院")
@@ -50,6 +52,8 @@ public class CollegeController {
     @PostMapping
     @Operation(summary = "新增学院")
     public Result<Void> create(@RequestBody College college) {
+        Long count = jdbc.queryForObject("SELECT COUNT(*) FROM college WHERE college_code=?", Long.class, college.getCollegeCode());
+        if (count != null && count > 0) return Result.badRequest("学院编码已存在");
         collegeMapper.insert(college);
         return Result.ok("创建成功");
     }
@@ -65,7 +69,7 @@ public class CollegeController {
     @DeleteMapping("/{id}")
     @Operation(summary = "删除学院")
     public Result<Void> delete(@PathVariable Long id) {
-        collegeMapper.deleteById(id);
+        jdbc.update("DELETE FROM college WHERE id=?", id);
         return Result.ok("删除成功");
     }
 }

@@ -34,8 +34,7 @@ public abstract class BaseEntity implements Serializable {
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private Long updateBy;
 
-    /** 逻辑删除标志 (0-未删除, 1-已删除) */
-    @TableLogic
+    /** 删除标志 (0-未删除, 1-已删除) */
     private Integer deleted;
 
     /** 备注 */

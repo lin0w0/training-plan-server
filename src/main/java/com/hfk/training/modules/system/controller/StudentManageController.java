@@ -86,10 +86,9 @@ public class StudentManageController {
     @Operation(summary = "新增学生")
     @PreAuthorize("hasAnyAuthority('data:student:add','ROLE_ADMIN')")
     public Result<Void> create(@RequestBody Student student) {
-        // 学号唯一性校验
-        Long count = studentMapper.selectCount(new LambdaQueryWrapper<Student>()
-                .eq(Student::getStudentNo, student.getStudentNo()));
-        if (count > 0) return Result.badRequest("学号已存在");
+        // 学号唯一性校验（含已删除记录）
+        Long count = jdbc.queryForObject("SELECT COUNT(*) FROM student WHERE student_no=?", Long.class, student.getStudentNo());
+        if (count != null && count > 0) return Result.badRequest("学号已存在");
         studentMapper.insert(student);
         return Result.ok("创建成功");
     }
@@ -107,7 +106,7 @@ public class StudentManageController {
     @Operation(summary = "删除学生")
     @PreAuthorize("hasAnyAuthority('data:student:delete','ROLE_ADMIN')")
     public Result<Void> delete(@PathVariable Long id) {
-        studentMapper.deleteById(id);
+        jdbc.update("DELETE FROM student WHERE id=?", id);
         return Result.ok("删除成功");
     }
 }

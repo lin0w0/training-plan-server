@@ -9,6 +9,7 @@ import com.hfk.training.modules.system.mapper.MajorMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +23,7 @@ import java.util.Map;
 public class MajorController {
 
     private final MajorMapper majorMapper;
+    private final JdbcTemplate jdbc;
 
     @GetMapping("/page")
     @Operation(summary = "分页查询专业（含学院名称）")
@@ -53,6 +55,8 @@ public class MajorController {
     @PostMapping
     @Operation(summary = "新增专业")
     public Result<Void> create(@RequestBody Major major) {
+        Long count = jdbc.queryForObject("SELECT COUNT(*) FROM major WHERE major_code=?", Long.class, major.getMajorCode());
+        if (count != null && count > 0) return Result.badRequest("专业代码已存在");
         majorMapper.insert(major);
         return Result.ok("创建成功");
     }
@@ -68,7 +72,7 @@ public class MajorController {
     @DeleteMapping("/{id}")
     @Operation(summary = "删除专业")
     public Result<Void> delete(@PathVariable Long id) {
-        majorMapper.deleteById(id);
+        jdbc.update("DELETE FROM major WHERE id=?", id);
         return Result.ok("删除成功");
     }
 }

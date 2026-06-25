@@ -9,6 +9,7 @@ import com.hfk.training.modules.system.mapper.ClassInfoMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +23,7 @@ import java.util.Map;
 public class ClassInfoController {
 
     private final ClassInfoMapper classInfoMapper;
+    private final JdbcTemplate jdbc;
 
     @GetMapping("/page")
     @Operation(summary = "分页查询班级（含专业名称）")
@@ -54,6 +56,8 @@ public class ClassInfoController {
     @PostMapping
     @Operation(summary = "新增班级")
     public Result<Void> create(@RequestBody ClassInfo classInfo) {
+        Long count = jdbc.queryForObject("SELECT COUNT(*) FROM class_info WHERE class_code=?", Long.class, classInfo.getClassCode());
+        if (count != null && count > 0) return Result.badRequest("班级编码已存在");
         classInfoMapper.insert(classInfo);
         return Result.ok("创建成功");
     }
@@ -69,7 +73,7 @@ public class ClassInfoController {
     @DeleteMapping("/{id}")
     @Operation(summary = "删除班级")
     public Result<Void> delete(@PathVariable Long id) {
-        classInfoMapper.deleteById(id);
+        jdbc.update("DELETE FROM class_info WHERE id=?", id);
         return Result.ok("删除成功");
     }
 }

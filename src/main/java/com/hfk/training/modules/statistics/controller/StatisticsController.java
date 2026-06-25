@@ -136,56 +136,64 @@ public class StatisticsController {
     @GetMapping("/export/{type}")
     @Operation(summary = "导出报表为 Excel")
     @PreAuthorize("hasAnyAuthority('statistics:export','ROLE_ADMIN')")
-    public void export(@PathVariable String type, HttpServletResponse response) throws Exception {
-        String fileName = "plan".equals(type) ? "培养计划执行情况.xlsx" :
-                         "course".equals(type) ? "课程统计报表.xlsx" :
-                         "student".equals(type) ? "学生学业统计.xlsx" : "统计报表.xlsx";
+    public void export(@PathVariable String type, HttpServletResponse response) {
+        try {
+            String fileName = "plan".equals(type) ? "培养计划执行情况.xlsx" :
+                             "course".equals(type) ? "课程统计报表.xlsx" :
+                             "student".equals(type) ? "学生学业统计.xlsx" : "统计报表.xlsx";
 
-        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        response.setHeader("Content-Disposition", "attachment; filename=" +
-                URLEncoder.encode(fileName, StandardCharsets.UTF_8).replace("+", "%20"));
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            response.setHeader("Content-Disposition", "attachment; filename=" +
+                    URLEncoder.encode(fileName, StandardCharsets.UTF_8).replace("+", "%20"));
 
-        ServletOutputStream out = response.getOutputStream();
-        ExcelWriter writer = ExcelUtil.getWriter(true);
+            ServletOutputStream out = response.getOutputStream();
+            ExcelWriter writer = ExcelUtil.getWriter(true);
 
-        if ("plan".equals(type)) {
-            writer.addHeaderAlias("major_name", "专业名称");
-            writer.addHeaderAlias("student_count", "学生数");
-            writer.addHeaderAlias("passed_count", "通过课程数");
-            writer.write(jdbc.queryForList(
-                "SELECT m.major_name, COUNT(DISTINCT s.id) AS student_count," +
-                " COUNT(scr.id) AS passed_count" +
-                " FROM major m LEFT JOIN student s ON s.major_id=m.id AND s.deleted=0" +
-                " LEFT JOIN student_course_record scr ON scr.student_id=s.id AND scr.is_pass=1 AND scr.deleted=0" +
-                " WHERE m.deleted=0 GROUP BY m.id, m.major_name ORDER BY student_count DESC"));
-        } else if ("course".equals(type)) {
-            writer.addHeaderAlias("course_name", "课程名称");
-            writer.addHeaderAlias("plan_count", "开设专业数");
-            writer.addHeaderAlias("enrolled_count", "选课人数");
-            writer.addHeaderAlias("passed_count", "通过人数");
-            writer.write(jdbc.queryForList(
-                "SELECT c.course_name, (SELECT COUNT(*) FROM plan_course pc WHERE pc.course_id=c.id) AS plan_count," +
-                " (SELECT COUNT(*) FROM student_course_record scr WHERE scr.course_id=c.id) AS enrolled_count," +
-                " (SELECT COUNT(*) FROM student_course_record scr WHERE scr.course_id=c.id AND scr.is_pass=1) AS passed_count" +
-                " FROM course c WHERE c.deleted=0 ORDER BY enrolled_count DESC LIMIT 50"));
-        } else {
-            writer.addHeaderAlias("student_no", "学号");
-            writer.addHeaderAlias("real_name", "姓名");
-            writer.addHeaderAlias("major_name", "专业");
-            writer.addHeaderAlias("total_courses", "选课总数");
-            writer.addHeaderAlias("passed", "通过数");
-            writer.write(jdbc.queryForList(
-                "SELECT s.student_no, s.real_name, m.major_name," +
-                " COUNT(scr.id) AS total_courses," +
-                " COUNT(CASE WHEN scr.is_pass=1 THEN 1 END) AS passed" +
-                " FROM student s LEFT JOIN major m ON s.major_id=m.id" +
-                " LEFT JOIN student_course_record scr ON scr.student_id=s.id AND scr.deleted=0" +
-                " WHERE s.deleted=0 GROUP BY s.id, s.student_no, s.real_name, m.major_name ORDER BY s.student_no"));
+            if ("plan".equals(type)) {
+                writer.addHeaderAlias("major_name", "专业名称");
+                writer.addHeaderAlias("student_count", "学生数");
+                writer.addHeaderAlias("passed_count", "通过课程数");
+                writer.write(jdbc.queryForList(
+                    "SELECT m.major_name, COUNT(DISTINCT s.id) AS student_count," +
+                    " COUNT(scr.id) AS passed_count" +
+                    " FROM major m LEFT JOIN student s ON s.major_id=m.id AND s.deleted=0" +
+                    " LEFT JOIN student_course_record scr ON scr.student_id=s.id AND scr.is_pass=1 AND scr.deleted=0" +
+                    " WHERE m.deleted=0 GROUP BY m.id, m.major_name ORDER BY student_count DESC"));
+            } else if ("course".equals(type)) {
+                writer.addHeaderAlias("course_name", "课程名称");
+                writer.addHeaderAlias("plan_count", "开设专业数");
+                writer.addHeaderAlias("enrolled_count", "选课人数");
+                writer.addHeaderAlias("passed_count", "通过人数");
+                writer.write(jdbc.queryForList(
+                    "SELECT c.course_name, (SELECT COUNT(*) FROM plan_course pc WHERE pc.course_id=c.id AND pc.deleted=0) AS plan_count," +
+                    " (SELECT COUNT(*) FROM student_course_record scr WHERE scr.course_id=c.id AND scr.deleted=0) AS enrolled_count," +
+                    " (SELECT COUNT(*) FROM student_course_record scr WHERE scr.course_id=c.id AND scr.is_pass=1 AND scr.deleted=0) AS passed_count" +
+                    " FROM course c WHERE c.deleted=0 ORDER BY enrolled_count DESC LIMIT 50"));
+            } else {
+                writer.addHeaderAlias("student_no", "学号");
+                writer.addHeaderAlias("real_name", "姓名");
+                writer.addHeaderAlias("major_name", "专业");
+                writer.addHeaderAlias("total_courses", "选课总数");
+                writer.addHeaderAlias("passed", "通过数");
+                writer.write(jdbc.queryForList(
+                    "SELECT s.student_no, s.real_name, m.major_name," +
+                    " COUNT(scr.id) AS total_courses," +
+                    " COUNT(CASE WHEN scr.is_pass=1 THEN 1 END) AS passed" +
+                    " FROM student s LEFT JOIN major m ON s.major_id=m.id" +
+                    " LEFT JOIN student_course_record scr ON scr.student_id=s.id AND scr.deleted=0" +
+                    " WHERE s.deleted=0 GROUP BY s.id, s.student_no, s.real_name, m.major_name ORDER BY s.student_no"));
+            }
+
+            writer.flush(out, true);
+            writer.close();
+            out.close();
+        } catch (Exception e) {
+            log.error("导出失败", e);
+            try {
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("{\"code\":500,\"message\":\"导出失败:" + e.getMessage() + "\"}");
+            } catch (Exception ignored) {}
         }
-
-        writer.flush(out, true);
-        writer.close();
-        out.close();
     }
 
     @GetMapping("/export-pdf/{type}")

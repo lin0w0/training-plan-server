@@ -14,7 +14,8 @@
 | **Redis** | — | 缓存（Lettuce + Spring Cache） |
 | **Knife4j** | 4.5.0 | API 文档（OpenAPI 3.0 + Swagger UI） |
 | **OpenPDF** | 2.0.2 | PDF 报表生成 |
-| **Hutool** | 5.8.28 | Java 工具库（JSON / 异常 / 集合） |
+| **Apache POI** | 5.2.5 | Excel 文件读写 |
+| **Hutool** | 5.8.28 | Java 工具库（JSON / Excel / 异常 / 集合） |
 | **Lombok** | latest | 注解消除样板代码 |
 | **Spring AOP** | — | 操作日志切面 |
 | **Spring Validation** | — | 请求参数校验 |
@@ -35,7 +36,7 @@ training-plan-server/
     │   │
     │   ├── common/                               # 通用组件
     │   │   ├── BaseEntity.java                   #   实体基类（id/createTime/updateTime/deleted 等）
-    │   │   ├── Result.java                       #   统一响应体
+    │   │   ├── Result.java                       #   统一响应体（含快捷工厂方法如 ok/badRequest/forbidden）
     │   │   ├── PageResult.java                   #   分页结果封装
     │   │   ├── BusinessException.java            #   业务异常
     │   │   ├── GlobalExceptionHandler.java       #   全局异常处理（@RestControllerAdvice）
@@ -51,7 +52,7 @@ training-plan-server/
     │   └── modules/                              # 业务模块（Controller / Service / Mapper / Entity）
     │       ├── system/                           #   系统管理 & 基础数据
     │       │   ├── controller/
-    │       │   │   ├── SysUserController.java    #       用户管理
+    │       │   │   ├── SysUserController.java    #       用户管理（含密码重置、角色分配）
     │       │   │   ├── SysRoleController.java    #       角色管理 + 权限分配
     │       │   │   ├── SysPermissionController.java #    权限树
     │       │   │   ├── CollegeController.java    #       学院管理
@@ -59,7 +60,7 @@ training-plan-server/
     │       │   │   ├── ClassInfoController.java  #       班级管理
     │       │   │   ├── StudentManageController.java #   学生管理
     │       │   │   ├── TeacherController.java    #       教师管理
-    │       │   │   └── DashboardController.java  #       首页统计
+    │       │   │   └── DashboardController.java  #       待办事项（按角色推送）
     │       │   ├── entity/                       #       数据实体
     │       │   ├── service/                      #       业务逻辑
     │       │   └── mapper/                       #       数据访问
@@ -76,7 +77,7 @@ training-plan-server/
     │       │
     │       ├── plan/                             #   培养计划（核心）
     │       │   ├── controller/
-    │       │   │   └── PlanController.java       #       计划 CRUD + 课程安排 + 版本快照
+    │       │   │   └── PlanController.java       #       计划 CRUD + 课程安排 + 版本快照 + 按角色过滤
     │       │   ├── entity/
     │       │   │   ├── TrainingPlan.java         #       培养计划
     │       │   │   ├── PlanCourse.java           #       计划-课程关联
@@ -87,8 +88,8 @@ training-plan-server/
     │       │
     │       ├── student/                          #   学生学业
     │       │   ├── controller/
-    │       │   │   ├── StudentController.java    #       选课记录 + 修读进度
-    │       │   │   └── WarningController.java    #       学业预警
+    │       │   │   ├── StudentController.java    #       选课记录 + 修读进度 + 个人计划 + Excel 导入
+    │       │   │   └── WarningController.java    #       学业预警（按角色过滤 + 自动生成）
     │       │   ├── entity/
     │       │   │   ├── StudentCourseRecord.java  #       成绩记录
     │       │   │   └── AcademicWarning.java      #       预警记录
@@ -100,7 +101,7 @@ training-plan-server/
     │       │
     │       └── statistics/                       #   统计报表
     │           ├── controller/
-    │           │   └── StatisticsController.java #       数据统计接口
+    │           │   └── StatisticsController.java #       数据统计 + Excel 导出 + PDF 导出
     │           └── service/
     │               └── PdfExportService.java     #       PDF 报表生成
     │
@@ -161,7 +162,7 @@ java -jar target/training-plan-server-1.0.0-SNAPSHOT.jar
 
 - **Knife4j 接口文档**：[http://localhost:8080/doc.html](http://localhost:8080/doc.html)
 - **Swagger UI**：[http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
-- **健康检查**：`curl http://localhost:8080/auth/login`（无需认证）
+- **登录测试**：`curl -X POST http://localhost:8080/auth/login -H 'Content-Type: application/json' -d '{"username":"admin","password":"123456"}'`
 
 ## 🔑 默认测试账号
 
@@ -172,7 +173,7 @@ java -jar target/training-plan-server-1.0.0-SNAPSHOT.jar
 | `admin` | 系统管理员 | 全部权限 |
 | `teacher01` | 教师 | 课程查看、大纲提交 |
 | `teacher02` | 教师 | 课程查看、大纲提交 |
-| `20230101001` | 学生 | 计算机科学与技术 |
+| `20230101001` | 学生 | 计算机科学与技术（正常修读） |
 | `20230101002` | 学生 | 计算机科学与技术（含挂科/预警数据） |
 | `20230201001` | 学生 | 软件工程 |
 
@@ -213,7 +214,7 @@ java -jar target/training-plan-server-1.0.0-SNAPSHOT.jar
 | 表名 | 说明 |
 |------|------|
 | `training_plan` | 培养计划（plan_code 唯一、关联 major、学分门槛） |
-| `plan_course` | 计划-课程关联（plan_id + course_id + semester 唯一） |
+| `plan_course` | 计划-课程关联（plan_id + course_id + semester） |
 | `plan_snapshot` | 版本快照（plan_id + 课程 JSON 快照 + 变更说明） |
 
 ### 学生学业（2 表）
@@ -261,7 +262,7 @@ remark      VARCHAR      备注
 | 状态码 | 含义 |
 |--------|------|
 | `200` | 成功 |
-| `400` | 参数校验失败 |
+| `400` | 参数校验失败 / 业务校验不通过 |
 | `401` | 未登录 / Token 过期 |
 | `403` | 权限不足 |
 | `404` | 资源不存在 |
@@ -272,24 +273,24 @@ remark      VARCHAR      备注
 | 模块 | 路径前缀 | 主要端点 | 认证 |
 |------|----------|----------|------|
 | 认证 | `/auth` | `POST /login`, `GET /captcha`, `POST /register` | 无需 |
-| 首页 | `/dashboard` | `GET /stats` | JWT |
-| 用户管理 | `/system/user/**` | `GET /page`, `POST`, `PUT /{id}`, `DELETE /{id}` | JWT |
-| 角色管理 | `/system/role/**` | `GET /page`, `POST`, `PUT /{id}`, `DELETE /{id}`, `PUT /{id}/permissions` | JWT |
+| 待办事项 | `/auth` | `GET /pending-items`（按角色查询待处理任务） | JWT |
+| 用户管理 | `/system/user/**` | `GET /page`, `GET /all`, `GET /{id}`, `POST`, `PUT /{id}`, `DELETE /{id}`, `PUT /{id}/reset-pwd` | JWT |
+| 角色管理 | `/system/role/**` | `GET /page`, `GET /all`, `POST`, `PUT /{id}`, `DELETE /{id}`, `PUT /assign-permissions` | JWT |
 | 权限管理 | `/system/permission/**` | `GET /tree` | JWT |
-| 学院管理 | `/system/college/**` | CRUD + 分页 | JWT |
-| 专业管理 | `/system/major/**` | CRUD + 分页 | JWT |
-| 班级管理 | `/system/class/**` | CRUD + 分页 | JWT |
-| 学生管理 | `/system/student/**` | CRUD + 分页 | JWT |
-| 教师管理 | `/system/teacher/**` | CRUD + 分页 | JWT |
-| 课程库 | `/course/**` | CRUD + 分页 + `POST /import` 批量导入 | JWT |
-| 先修关系 | `/course/prerequisite/**` | CRUD | JWT |
-| 教学大纲 | `/syllabus/**` | CRUD + 分页 | JWT |
-| 培养计划 | `/plan/**` | CRUD + `POST /{id}/copy` 复制 + `PUT /{id}/publish` 发布 | JWT |
-| 计划课程 | `/plan/{id}/courses` | `GET` 列表 + `PUT` 保存 + `GET /courses-detail` 详情加权统计 | JWT |
-| 版本快照 | `/plan/{id}/snapshots` | `POST` 创建 + `GET` 列表 + `GET /snapshot/{id}` 详情 | JWT |
-| 学业记录 | `/student/**` | `GET /{id}/progress` 进度 + `GET /{id}/my-plan` 个人计划 | JWT |
-| 学业预警 | `/warning/**` | `GET /page` 列表 + `POST /generate` 生成 + `PUT /{id}/resolve` 处理 | JWT |
-| 统计报表 | `/statistics/**` | 各维度统计 + `GET /export/pdf` PDF 导出 | JWT |
+| 学院管理 | `/system/college/**` | `GET /page`, `GET /all`, `POST`, `PUT /{id}`, `DELETE /{id}` | JWT |
+| 专业管理 | `/system/major/**` | `GET /page`, `GET /all`, `POST`, `PUT /{id}`, `DELETE /{id}` | JWT |
+| 班级管理 | `/system/class/**` | `GET /page`, `POST`, `PUT /{id}`, `DELETE /{id}` | JWT |
+| 学生管理 | `/system/student/**` | `GET /page`, `POST`, `PUT /{id}`, `DELETE /{id}` | JWT |
+| 教师管理 | `/system/teacher/**` | `GET /page`, `POST`, `PUT /{id}`, `DELETE /{id}` | JWT |
+| 课程库 | `/course/**` | `GET /page`, `GET /all`, `GET /{id}`, `POST`, `PUT /{id}`, `DELETE /{id}`, `POST /import`（Excel 批量导入） | JWT |
+| 先修关系 | `/course/{id}/prerequisite/**` | `GET`, `POST`, `PUT`, `DELETE` | JWT |
+| 教学大纲 | `/syllabus/**` | `GET /page`, `GET /course/{id}`, `POST`, `PUT /{id}` | JWT |
+| 培养计划 | `/plan/**` | `GET /page`（按角色过滤）, `GET /{id}`, `POST`, `PUT /{id}`, `DELETE /{id}`, `POST /{id}/copy`, `PUT /{id}/publish` | JWT |
+| 计划课程 | `/plan/{id}/courses` | `GET` 列表 + `PUT` 保存 + `GET /courses-detail`（按学期分组 + 学分统计） | JWT |
+| 版本快照 | `/plan/{id}/snapshots` | `POST` 创建 + `GET` 列表；`GET /plan/snapshot/{id}` 详情 | JWT |
+| 学业记录 | `/student/**` | `GET /page`, `GET /{id}/courses`, `POST /course-record`, `PUT /course-record/{id}`, `DELETE /course-record/{id}`, `POST /courses/import`（Excel 导入）, `GET /{id}/progress`, `GET /my-progress`, `GET /my-plan` | JWT |
+| 学业预警 | `/warning/**` | `GET /page`（学生只看自己）, `GET /student/{id}`, `PUT /{id}/resolve`, `POST /generate` | JWT |
+| 统计报表 | `/statistics/**` | `GET /overview`, `GET /plan-execution`, `GET /course-stats`, `GET /graduation-analysis/{majorId}`, `GET /semester-credits`, `GET /export/{type}`（Excel）, `GET /export-pdf/{type}`（PDF） | JWT |
 
 ## 🔐 安全设计
 
@@ -379,6 +380,8 @@ private Integer deleted;  // 0=正常, 1=删除
 
 MyBatis-Plus 自动在查询 / 删除时追加 `WHERE deleted=0` / `SET deleted=1`。
 
+> 注意：`student_course_record` 表在新增时因唯一约束 `(student_id, course_id, semester)` 需要检查历史记录，此处使用 `jdbcTemplate` 查询含已删除数据的记录数，删除时使用物理删除以避免冲突。
+
 ### 自动填充
 
 `MyMetaObjectHandler` 自动填充 `createTime`、`updateTime`、`createBy`、`updateBy`，无需手动设置时间戳和操作人。
@@ -393,13 +396,31 @@ MyBatis-Plus 自动在查询 / 删除时追加 `WHERE deleted=0` / `SET deleted=
 | `teacher` | 本学院已发布计划 |
 | `student` | 本专业已发布计划 |
 
+### 待办事项按角色推送
+
+`DashboardController` 挂载在 `/auth` 路径下，提供 `GET /auth/pending-items` 端点，根据当前登录用户的角色返回不同的待处理事项：
+- **管理员**：待审核大纲数 + 待发布计划数
+- **教师**：被驳回大纲数 + 草稿大纲数
+- **学生**：未处理预警数 + 未通过课程数
+
 ### 版本快照
 
-培养计划的课程安排保存为 JSON 快照（`plan_snapshot` 表），支持版本回溯与对比。快照使用 Hutool `JSONUtil` 序列化/反序列化。
+培养计划的课程安排保存为 JSON 快照（`plan_snapshot` 表），支持版本回溯。快照使用 Hutool `JSONUtil` 序列化/反序列化。
+
+### Excel 导入/导出
+
+- **课程批量导入**：`CourseImportController` 接收 Excel 文件，逐行解析并写入
+- **选课记录导入**：`StudentController.importRecords()` 使用 Hutool `ExcelUtil` 读取 Excel，逐行写入
+- **报表 Excel 导出**：`StatisticsController.export()` 使用 Hutool `ExcelWriter` 动态生成并流式输出
+- **报表 PDF 导出**：`PdfExportService` 使用 OpenPDF 按类型生成 PDF 文件并流式输出
 
 ### 唯一性校验
 
 Controller 层在创建/更新时先查重，若违反唯一约束则直接返回 `400` 错误信息，避免数据库异常逃逸到客户端。
+
+### 预警按角色过滤
+
+`WarningController.page()` 自动识别当前用户角色——学生只能看到自己的预警记录，管理员可查看全部。
 
 ## 🧪 测试数据
 

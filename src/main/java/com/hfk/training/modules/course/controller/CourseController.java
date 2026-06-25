@@ -9,6 +9,7 @@ import com.hfk.training.modules.course.service.CourseService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,6 +22,7 @@ import java.util.List;
 public class CourseController {
 
     private final CourseService courseService;
+    private final JdbcTemplate jdbc;
 
     @GetMapping("/page")
     @Operation(summary = "分页查询课程")
@@ -81,7 +83,7 @@ public class CourseController {
     @Operation(summary = "删除课程")
     @PreAuthorize("hasAnyAuthority('course:delete','ROLE_ADMIN')")
     public Result<Void> delete(@PathVariable Long id) {
-        courseService.removeById(id);
+        jdbc.update("DELETE FROM course WHERE id=?", id);
         return Result.ok("删除成功");
     }
 }
